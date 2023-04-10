@@ -1,0 +1,9 @@
+[build]
+  command = ""
+  publish = "./"
+
+[[redirects]]
+  from = "/api/*"
+  to = "http://localhost:3000/api/:splat"
+  status = 200
+
