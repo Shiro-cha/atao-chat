@@ -11,6 +11,14 @@ app.use(bodyParser.json());
 const openaiApiKey = process.env.OPENAI_API_KEY;
 openai.apiKey = openaiApiKey;
 
+// for Facebook verification
+app.get('/webhook/', function (req, res) {
+	if (req.query['hub.verify_token'] === 'my_voice_is_my_password_verify_me') {
+		res.send(req.query['hub.challenge'])
+	}
+	res.send('Error, wrong token')
+})
+
 // Set up webhook endpoint for Facebook Messenger
 app.post('/webhook', (req, res) => {
   const messagingEvents = req.body.entry[0].messaging;
@@ -33,7 +41,32 @@ function handleMessage(senderId, message) {
     temperature: 0.7,
   }).then(response => {
     const text = response.data.choices[0].text;
-    sendTextMessage(senderId, text);
+
+    // Check if the user is asking to create a task
+    if (text.includes('create task')) {
+      const task = text.replace('create task', '').trim();
+      tasks.push(task);
+      sendTextMessage(senderId, `Task "${task}" created.`);
+    }
+
+    // Check if the user is asking to list all tasks
+    if (text.includes('list tasks')) {
+      const taskList = tasks.length > 0 ? tasks.join(', ') : 'No tasks yet';
+      sendTextMessage(senderId, `Tasks: ${taskList}`);
+    }
+
+    // Check if the user is asking to complete a task
+    if (text.includes('complete task')) {
+      const task = text.replace('complete task', '').trim();
+      const index = tasks.indexOf(task);
+      if (index > -1) {
+        tasks.splice(index, 1);
+        sendTextMessage(senderId, `Task "${task}" completed.`);
+      } else {
+        sendTextMessage(senderId, `Task "${task}" not found.`);
+      }
+    }
+
   }).catch(error => console.error(error));
 }
 
